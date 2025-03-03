@@ -1,0 +1,286 @@
+{% extends 'officer/base.html' %}
+
+{% block title %}Schedules - KRSTC Officer Portal{% endblock %}
+{% block page_title %}Schedules{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-calendar-alt me-2"></i> All Schedules</span>
+        <div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createScheduleModal">
+                <i class="fas fa-plus"></i> Create Schedule
+            </button>
+            <form action="{% url 'officer:all_schedules' %}" method="get" class="d-inline-flex ms-2">
+                <select name="depot" class="form-select me-2" onchange="this.form.submit()">
+                    <option value="">All Depots</option>
+                    {% for depot in depots %}
+                    <option value="{{ depot.id }}" {% if selected_depot_id == depot.id|stringformat:"i" %}selected{% endif %}>
+                        {{ depot.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-outline-primary">Filter</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <div class="row">
+            {% for schedule in schedules %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ schedule.title }}</h5>
+                        {% if schedule.is_global %}
+                        <span class="badge bg-info">Global</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text text-truncate">{{ schedule.description|default:"No description" }}</p>
+                        
+                        <div class="mt-3">
+                            <p class="mb-0"><strong>Created by:</strong> {{ schedule.created_by.get_full_name|default:schedule.created_by.username }}</p>
+                            <p class="mb-0"><strong>Created:</strong> {{ schedule.created_at|date:"F j, Y" }}</p>
+                            {% if schedule.depot %}
+                            <p class="mb-0"><strong>Depot:</strong> {{ schedule.depot.name }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between align-items-center bg-transparent">
+                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#viewScheduleModal{{ schedule.id }}">
+                            <i class="fas fa-eye"></i> View Details
+                        </button>
+                        {% if schedule.pdf_file %}
+                        <a href="{{ schedule.pdf_file.url }}" class="btn btn-sm btn-success" target="_blank">
+                            <i class="fas fa-file-pdf"></i> View PDF
+                        </a>
+                        {% else %}
+                        <span class="text-muted small">No PDF attached</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info text-center" role="alert">
+                    No schedules found. Create a new schedule to get started.
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if schedules.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if schedules.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if selected_depot_id %}&depot={{ selected_depot_id }}{% endif %}">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ schedules.previous_page_number }}{% if selected_depot_id %}&depot={{ selected_depot_id }}{% endif %}">Previous</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">First</a>
+                </li>
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for num in schedules.paginator.page_range %}
+                    {% if schedules.number == num %}
+                    <li class="page-item active">
+                        <a class="page-link" href="#">{{ num }}</a>
+                    </li>
+                    {% elif num > schedules.number|add:'-3' and num < schedules.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if selected_depot_id %}&depot={{ selected_depot_id }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if schedules.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ schedules.next_page_number }}{% if selected_depot_id %}&depot={{ selected_depot_id }}{% endif %}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ schedules.paginator.num_pages }}{% if selected_depot_id %}&depot={{ selected_depot_id }}{% endif %}">Last</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Create Schedule Modal -->
+<div class="modal fade" id="createScheduleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'officer:create_schedule' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Schedule</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="scheduleTitle" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="scheduleTitle" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="scheduleDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="scheduleDescription" name="description" rows="4"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="scheduleIsGlobal" name="is_global">
+                            <label class="form-check-label" for="scheduleIsGlobal">
+                                Send to all depots
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="depotSelectContainer">
+                        <label for="scheduleDepot" class="form-label">Select Depot</label>
+                        <select class="form-select" id="scheduleDepot" name="depot">
+                            <option value="">Select a depot</option>
+                            {% for depot in depots %}
+                            <option value="{{ depot.id }}">{{ depot.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="schedulePdf" class="form-label">Upload PDF (Optional)</label>
+                        <input type="file" class="form-control" id="schedulePdf" name="pdf_file" accept="application/pdf">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Schedule Modals -->
+{% for schedule in schedules %}
+<div class="modal fade" id="viewScheduleModal{{ schedule.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ schedule.title }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6>Description</h6>
+                        <p>{{ schedule.description|default:"No description provided." }}</p>
+                        
+                        <h6 class="mt-4">Details</h6>
+                        <table class="table table-bordered">
+                            <tr>
+                                <th width="30%">Created by</th>
+                                <td>{{ schedule.created_by.get_full_name|default:schedule.created_by.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>Created on</th>
+                                <td>{{ schedule.created_at|date:"F j, Y" }} at {{ schedule.created_at|date:"g:i A" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Depot</th>
+                                <td>
+                                    {% if schedule.depot %}
+                                        {{ schedule.depot.name }}
+                                    {% elif schedule.is_global %}
+                                        All Depots (Global)
+                                    {% else %}
+                                        Not specified
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Status</th>
+                                <td>
+                                    {% if schedule.is_global %}
+                                        <span class="badge bg-info">Global</span>
+                                    {% else %}
+                                        <span class="badge bg-primary">Depot-Specific</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-4">
+                        {% if schedule.pdf_file %}
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-file-pdf text-danger"></i> PDF Document
+                            </div>
+                            <div class="card-body text-center">
+                                <i class="fas fa-file-pdf fa-4x text-danger mb-3"></i>
+                                <p class="mb-0">{{ schedule.pdf_file.name|cut:"schedules/"|default:"Schedule.pdf" }}</p>
+                                <div class="mt-3">
+                                    <a href="{{ schedule.pdf_file.url }}" class="btn btn-sm btn-primary" target="_blank">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                    <a href="{{ schedule.pdf_file.url }}" class="btn btn-sm btn-success" download>
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-file-pdf text-muted"></i> PDF Document
+                            </div>
+                            <div class="card-body text-center">
+                                <i class="fas fa-times-circle fa-4x text-muted mb-3"></i>
+                                <p>No PDF file attached to this schedule.</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                {% if schedule.depot %}
+                <a href="{% url 'officer:depot_detail' schedule.depot.id %}" class="btn btn-primary">
+                    <i class="fas fa-building"></i> Go to Depot
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Handle global schedule checkbox
+        $('#scheduleIsGlobal').change(function() {
+            if($(this).is(':checked')) {
+                $('#depotSelectContainer').hide();
+                $('#scheduleDepot').prop('required', false);
+            } else {
+                $('#depotSelectContainer').show();
+                $('#scheduleDepot').prop('required', true);
+            }
+        });
+    });
+</script>
+{% endblock %}

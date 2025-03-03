@@ -1,0 +1,303 @@
+{% extends 'officer/base.html' %}
+
+{% block title %}Announcements - KRSTC Officer Portal{% endblock %}
+{% block page_title %}Announcements{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-bullhorn me-2"></i> All Announcements</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Priority</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for announcement in announcements %}
+                            <tr>
+                                <td>
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#viewAnnouncementModal{{ announcement.id }}" class="text-decoration-none">
+                                        {{ announcement.title }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge 
+                                        {% if announcement.priority == 'low' %}bg-info
+                                        {% elif announcement.priority == 'medium' %}bg-warning
+                                        {% elif announcement.priority == 'high' %}bg-danger
+                                        {% elif announcement.priority == 'urgent' %}bg-danger text-white
+                                        {% endif %}">
+                                        {{ announcement.priority|title }}
+                                    </span>
+                                </td>
+                                <td>{{ announcement.created_at|date:"M j, Y" }}</td>
+                                <td>
+                                    <span class="badge {% if announcement.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {{ announcement.is_active|yesno:"Active,Inactive" }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#viewAnnouncementModal{{ announcement.id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editAnnouncementModal{{ announcement.id }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAnnouncementModal{{ announcement.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">No announcements found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if announcements.has_other_pages %}
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if announcements.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ announcements.previous_page_number }}">Previous</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">First</a>
+                        </li>
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">Previous</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in announcements.paginator.page_range %}
+                            {% if announcements.number == num %}
+                            <li class="page-item active">
+                                <a class="page-link" href="#">{{ num }}</a>
+                            </li>
+                            {% elif num > announcements.number|add:'-3' and num < announcements.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if announcements.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ announcements.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ announcements.paginator.num_pages }}">Last</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">Next</a>
+                        </li>
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">Last</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-plus me-2"></i> Create Announcement
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'officer:create_announcement' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="announcementTitle" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="announcementTitle" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="announcementContent" class="form-label">Content</label>
+                        <textarea class="form-control" id="announcementContent" name="content" rows="5" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="announcementPriority" class="form-label">Priority</label>
+                        <select class="form-select" id="announcementPriority" name="priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i> Create Announcement
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-info-circle me-2"></i> Announcement Information
+            </div>
+            <div class="card-body">
+                <p>Announcements will be sent to all depot apps immediately upon creation. Use this feature to communicate important information to all depots.</p>
+                
+                <h6 class="mt-3">Priority Levels:</h6>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Low
+                        <span class="badge bg-info">Informational</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Medium
+                        <span class="badge bg-warning">Important</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        High
+                        <span class="badge bg-danger">Critical</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Urgent
+                        <span class="badge bg-danger">Immediate Action Required</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Announcement Modals -->
+{% for announcement in announcements %}
+<div class="modal fade" id="viewAnnouncementModal{{ announcement.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ announcement.title }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="badge 
+                        {% if announcement.priority == 'low' %}bg-info
+                        {% elif announcement.priority == 'medium' %}bg-warning
+                        {% elif announcement.priority == 'high' %}bg-danger
+                        {% elif announcement.priority == 'urgent' %}bg-danger text-white
+                        {% endif %}">
+                        {{ announcement.priority|title }} Priority
+                    </span>
+                    <span class="text-muted">{{ announcement.created_at|date:"F j, Y" }}</span>
+                </div>
+                
+                <p>{{ announcement.content }}</p>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <strong>Created by:</strong> {{ announcement.created_by.get_full_name|default:announcement.created_by.username }}
+                    </div>
+                    <div>
+                        <span class="badge {% if announcement.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                            {{ announcement.is_active|yesno:"Active,Inactive" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Announcement Modals -->
+<div class="modal fade" id="editAnnouncementModal{{ announcement.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'officer:update_announcement' announcement.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Announcement</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editTitle{{ announcement.id }}" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="editTitle{{ announcement.id }}" name="title" value="{{ announcement.title }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editContent{{ announcement.id }}" class="form-label">Content</label>
+                        <textarea class="form-control" id="editContent{{ announcement.id }}" name="content" rows="5" required>{{ announcement.content }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPriority{{ announcement.id }}" class="form-label">Priority</label>
+                        <select class="form-select" id="editPriority{{ announcement.id }}" name="priority">
+                            <option value="low" {% if announcement.priority == 'low' %}selected{% endif %}>Low</option>
+                            <option value="medium" {% if announcement.priority == 'medium' %}selected{% endif %}>Medium</option>
+                            <option value="high" {% if announcement.priority == 'high' %}selected{% endif %}>High</option>
+                            <option value="urgent" {% if announcement.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editActive{{ announcement.id }}" name="is_active" {% if announcement.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="editActive{{ announcement.id }}">
+                                Active
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Announcement Modals -->
+<div class="modal fade" id="deleteAnnouncementModal{{ announcement.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'officer:delete_announcement' announcement.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the announcement "<strong>{{ announcement.title }}</strong>"?</p>
+                    <p class="text-danger"><strong>Note:</strong> This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete Announcement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

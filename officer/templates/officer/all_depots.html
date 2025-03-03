@@ -1,0 +1,145 @@
+{% extends 'officer/base.html' %}
+
+{% block title %}All Depots - KRSTC Officer Portal{% endblock %}
+{% block page_title %}All Depots{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-building me-2"></i> All Depots</span>
+        <div class="d-flex">
+            <div class="input-group me-2">
+                <input type="text" id="depotSearch" class="form-control" placeholder="Search depots...">
+                <button class="btn btn-outline-secondary" type="button">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-filter me-1"></i> Filter
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{% url 'officer:all_depots' %}">All Depots</a></li>
+                    <li><a class="dropdown-item" href="{% url 'officer:all_depots' %}?status=active">Active Depots</a></li>
+                    <li><a class="dropdown-item" href="{% url 'officer:all_depots' %}?status=inactive">Inactive Depots</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row" id="depotsContainer">
+            {% for depot in depots %}
+            <div class="col-md-4 mb-4 depot-card">
+                <div class="card h-100 {% if not depot.is_active %}border-secondary{% endif %}">
+                    <div class="card-header d-flex justify-content-between align-items-center {% if not depot.is_active %}bg-light text-muted{% endif %}">
+                        <h5 class="mb-0">{{ depot.name }}</h5>
+                        <span class="badge bg-{{ depot.is_active|yesno:'success,secondary' }}">
+                            {{ depot.is_active|yesno:'Active,Inactive' }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p><i class="fas fa-map-marker-alt me-2"></i> {{ depot.location }}</p>
+                        <p><i class="fas fa-user me-2"></i> {{ depot.contact_person }}</p>
+                        
+                        {% if depot.user.last_login_time %}
+                        <p><i class="fas fa-clock me-2"></i> Last active: {{ depot.user.last_login_time|timesince }} ago</p>
+                        {% else %}
+                        <p><i class="fas fa-clock me-2"></i> Last active: Never</p>
+                        {% endif %}
+                        
+                        <div class="mt-3">
+                            {% with unread_count=depot.user.received_messages.filter.count %}
+                            {% if unread_count > 0 %}
+                            <span class="badge bg-warning text-dark me-2">{{ unread_count }} unread messages</span>
+                            {% endif %}
+                            {% endwith %}
+                            
+                            {% with schedule_count=depot.schedules.count %}
+                            {% if schedule_count > 0 %}
+                            <span class="badge bg-info text-dark">{{ schedule_count }} schedules</span>
+                            {% endif %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{% url 'officer:depot_detail' depot.id %}" class="btn btn-primary w-100">
+                            <i class="fas fa-eye me-1"></i> View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info text-center" role="alert">
+                    No depots found.
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if depots.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if depots.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ depots.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">First</a>
+                </li>
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for num in depots.paginator.page_range %}
+                    {% if depots.number == num %}
+                    <li class="page-item active">
+                        <a class="page-link" href="#">{{ num }}</a>
+                    </li>
+                    {% elif num > depots.number|add:'-3' and num < depots.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if depots.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ depots.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ depots.paginator.num_pages }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Last</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Simple search functionality
+        $("#depotSearch").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+            $("#depotsContainer .depot-card").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+    });
+</script>
+{% endblock %}
