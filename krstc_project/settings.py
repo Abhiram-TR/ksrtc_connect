@@ -209,4 +209,4 @@ CORS_ALLOW_HEADERS = [
 LOGIN_REDIRECT_URL = 'officer:dashboard'  # Redirect to the officer dashboard after login
 LOGOUT_REDIRECT_URL = 'login'  # Redirect to login page after logout
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.36','192.168.211.248'] 
+ALLOWED_HOSTS = ['abhiramt.pythonanywhere.com'] 
