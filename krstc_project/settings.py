@@ -170,12 +170,11 @@ CHANNEL_LAYERS = {
 
 # CORS settings for React Native app
 CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8000",  # Django dev server
-    "http://localhost:3000",  # React Native dev server
-    "http://localhost:19006", # Expo web
-    # Add production URLs here
-]
+"""CORS_ALLOWED_ORIGINS = [
+    "*" # Expo web
+   
+]"""
+
 # Allow credentials in CORS requests
 CORS_ALLOW_CREDENTIALS = True
 
